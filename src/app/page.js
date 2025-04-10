@@ -1,4 +1,4 @@
-import LeafletMap from '../components/Map';
+import MapWrapper from '../components/MapWrapper';
 
 export default function HomePage() {
   return (
@@ -33,7 +33,7 @@ export default function HomePage() {
 
             {/* Map + Indicators */}
             <div className="flex-1 bg-white shadow p-2 relative">
-              <div className="absolute inset-0 z-0"><LeafletMap /></div>
+              <div className="absolute inset-0 z-0"><MapWrapper /></div>
               <div className="absolute top-2 right-2 bg-red-200 p-2 text-xs">project x controls</div>
               <div className="absolute top-2 left-2 text-xs">Sat: ... Fix: ...</div>
               <div className="w-20 h-20 bg-blue-100 rounded-full absolute right-20 top-12 flex items-center justify-center">Yaw</div>
