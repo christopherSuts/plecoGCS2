@@ -2,8 +2,8 @@ import os
 from fastapi import FastAPI
 from pydantic import BaseModel
 from typing import List
-from mission_service import MissionUploader
-from mavlink_service import MavlinkService
+from .mission_service import MissionUploader
+from .mavlink_service import MavlinkService
 
 MAV_EP = os.getenv("MAVLINK_ENDPOINT_API", "udpin:127.0.0.1:14551")
 app = FastAPI(title="Jetson Agent API")

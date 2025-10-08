@@ -4,7 +4,8 @@ from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 from typing import List
 import httpx
-from mission_schema import Mission
+from .mission_schema import Mission
+from ..algorithms.path_planner.grid_coverage import plan_lawnmower
 
 JETSON_API = os.getenv("JETSON_AGENT_API", "http://127.0.0.1:9000")
 app = FastAPI(title="GCS Server API")
@@ -24,9 +25,18 @@ class BoundaryReq(BaseModel):
 @app.post("/plan/coverage")
 def plan_coverage(req: BoundaryReq):
     # TODO: call your real algorithms.path_planner
-    wps = [{"seq":i,"lat":lat,"lon":lng,"alt":0.0,"cmd":16}
-           for i,(lng,lat) in enumerate(req.boundary)]
-    return {"mission": wps}
+    # wps = [{"seq":i,"lat":lat,"lon":lng,"alt":0.0,"cmd":16}
+        #    for i,(lng,lat) in enumerate(req.boundary)]
+    # return {"mission": wps}
+    pts = plan_lawnmower(
+        boundary=req.boundary,
+        spacing_m=req.spacing_m,
+        angle_deg=req.angle_deg,
+        start=req.start
+    )
+    mission = [{"seq":i, "lat":lat, "lon":lng, "alt":0.0, "cmd":16}
+               for i,(lng,lat) in enumerate(pts)]
+    return {"mission": mission}
 
 @app.post("/mission/upload")
 async def mission_upload(m: Mission):
