@@ -1,6 +1,6 @@
 "use client";
 
-import { MapContainer, TileLayer, useMap, Marker, Popup } from "react-leaflet";
+import { MapContainer, TileLayer, useMap, Marker, Popup, Polyline } from "react-leaflet";
 import L from 'leaflet';
 import "leaflet/dist/leaflet.css";
 import { useEffect, useState } from "react";
@@ -14,8 +14,7 @@ const customIcon = L.icon({
   popupAnchor: [1, -34],
   shadowSize: [41, 41],
 });
-
-const DEFAULT_COORDS = { lat: -6.18, lng: 106.82 }; // fallback lokasi (Jakarta)
+const DEFAULT_COORDS = { lat: -6.144353601068162, lng: 106.88533858899994 }; // fallback location (Waduk Sunter)
 const zoomSize = 16;
 
 function SetMapToUserLocation({ setCoords }) {
@@ -73,7 +72,7 @@ function MouseCoordinates() {
   );
 }
 
-export default function LeafletMap() {
+export default function LeafletMap({ pathCoords = [] }) {
   const [userCoords, setUserCoords] = useState(DEFAULT_COORDS);
 
   return (
@@ -89,6 +88,11 @@ export default function LeafletMap() {
         <Marker position={[userCoords.lat, userCoords.lng]} icon={customIcon}>
           <Popup>GCS Location</Popup>
         </Marker>
+        
+        {/* Recorded perimeter polyline (maroon) */}
+        {Array.isArray(pathCoords) && pathCoords.length > 1 && (
+          <Polyline positions={pathCoords} pathOptions={{ color: "#6B0F2B", weight: 4, opacity: 0.9 }} />
+        )}
       </MapContainer>
     </div>
   );

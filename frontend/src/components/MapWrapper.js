@@ -6,6 +6,6 @@ const LeafletMap = dynamic(() => import('./LeafletMap'), {
   ssr: false,
 });
 
-export default function MapWrapper() {
-  return <LeafletMap />;
+export default function MapWrapper({ pathCoords }) {
+  return <LeafletMap pathCoords={pathCoords} />;
 }

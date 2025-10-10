@@ -1,26 +1,16 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* --- AMV theme tokens --- */
+:root{
+  --amv-black:   #000000; /* header/footer/sidebar */
+  --amv-grey:   #1e1e1e;
+  --amv-maroon: #a03e57; /* buttons / primary accents */
+  --amv-white:  #FFFFFF;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  --color-amv-black:   var(--amv-black);
+  --color-amv-grey:    var(--amv-grey);
+  --color-amv-maroon: var(--amv-maroon);
+  --color-amv-white:  var(--amv-white);
 }
