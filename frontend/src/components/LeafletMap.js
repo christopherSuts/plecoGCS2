@@ -201,12 +201,6 @@ export default function LeafletMap({
                       Move
                     </button>
                     <button
-                      className="px-2 py-1 rounded bg-white border hover:bg-black/5"
-                      onClick={() => onBoundaryRemovePoint?.(p.id)}
-                    >
-                      Remove
-                    </button>
-                    <button
                       className="px-2 py-1 rounded bg-[#b91c1c] text-white hover:bg-[#991b1b]"
                       onClick={() => onBoundaryRemovePoint?.(p.id)}
                     >
