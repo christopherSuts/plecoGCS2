@@ -111,13 +111,128 @@ export default function HomePage() {
   const [isPaused, setIsPaused] = useState(false);
   const [showStopModal, setShowStopModal] = useState(false);
 
+  // --- Boundaries state ---
+  const [isBoundarySession, setIsBoundarySession] = useState(false);
+  const [isBoundaryAdding, setIsBoundaryAdding] = useState(false);     // true = left-click adds dots
+  const [boundaryPoints, setBoundaryPoints] = useState([]);            // [{id, lat, lng, seq}]
+  const [movingDotId, setMovingDotId] = useState(null);                // which dot is draggable
+  const [showStopBoundaryModal, setShowStopBoundaryModal] = useState(false);
+
   // Collected GPS points (lat, lng) for drawing the path
   const [perimeterPath, setPerimeterPath] = useState([]);
+
+  // example “saved” list in-memory (replace with real storage later)
+  const [savedBoundaries, setSavedBoundaries] = useState([]);          // [{id, name, points: [...] }]
+  const [shownBoundaryId, setShownBoundaryId] = useState(null);  
+
+  const boundaryHasAny = boundaryPoints.length > 0;
+  const boundaryShown = shownBoundaryId !== null;
 
   const handleRecordPerimeter = useCallback(() => {
     setIsRecording(true);
     setIsPaused(false);
     setPerimeterPath([]); // reset at start
+  }, []);
+
+  // Start “Create boundaries”
+  const handleBoundaryStart = useCallback(() => {
+    // warning modal (simple confirm for now). Replace with a nicer modal when you like.
+    const ok = window.confirm(
+      "Recommended: Perform a perimeter survey first — shoreline may differ from the map. Continue to boundary drawing?"
+    );
+    if (!ok) return;
+
+    setIsBoundarySession(true);
+    setIsBoundaryAdding(true);   // start in “adding” mode
+    setBoundaryPoints([]);
+    setMovingDotId(null);
+    setShownBoundaryId(null);    // we’re defining a new one
+  }, []);
+
+  // Toggle adding: left click on map adds dots when true
+const handleBoundaryAddToggle = useCallback(() => {
+  setIsBoundaryAdding((v) => !v);
+}, []);
+
+const handleBoundaryStopRequest = useCallback(() => {
+  setShowStopBoundaryModal(true);
+}, []);
+
+const handleBoundaryStopCancel = useCallback(() => {
+  setShowStopBoundaryModal(false);
+}, []);
+
+const handleBoundaryStopDontSave = useCallback(() => {
+  setIsBoundarySession(false);
+  setIsBoundaryAdding(false);
+  setMovingDotId(null);
+  setBoundaryPoints([]);
+  setShowStopBoundaryModal(false);
+}, []);
+
+const handleBoundaryStopSave = useCallback(() => {
+  if (boundaryPoints.length < 3) {
+    alert("A boundary needs at least 3 points.");
+    return;
+  }
+  const name = prompt("Name this boundary:", `Boundary ${savedBoundaries.length + 1}`) || "Boundary";
+  const id = Date.now();
+  setSavedBoundaries((prev) => [...prev, { id, name, points: boundaryPoints }]);
+  setShownBoundaryId(id);   // auto-show what we just saved
+  setIsBoundarySession(false);
+  setIsBoundaryAdding(false);
+  setMovingDotId(null);
+  setBoundaryPoints([]);
+  setShowStopBoundaryModal(false);
+}, [boundaryPoints, savedBoundaries.length]);
+
+// Show saved boundaries (simple list for now; you can swap to a fancy dialog later)
+const handleBoundaryShowSaved = useCallback(() => {
+  if (savedBoundaries.length === 0) {
+    alert("No saved boundaries yet.");
+    return;
+  }
+  const names = savedBoundaries.map((b, i) => `${i + 1}. ${b.name}`).join("\n");
+  const input = prompt(`Show which boundary?\n${names}\nEnter number:`);
+  const idx = Number(input) - 1;
+  if (Number.isNaN(idx) || idx < 0 || idx >= savedBoundaries.length) return;
+  setShownBoundaryId(savedBoundaries[idx].id);
+}, [savedBoundaries]);
+
+// Clear shown boundary (disabled in menu when none shown)
+const handleBoundaryClearShown = useCallback(() => {
+  setShownBoundaryId(null);
+}, []);
+
+// When map is clicked (from MapWrapper callbacks)
+const handleBoundaryAddPoint = useCallback((latlng) => {
+  setBoundaryPoints((prev) => {
+    const seq = prev.length + 1;
+    return [...prev, { id: Date.now() + Math.random(), lat: latlng.lat, lng: latlng.lng, seq }];
+  });
+  }, []);
+
+  const handleBoundaryRemovePoint = useCallback((id) => {
+    setBoundaryPoints((prev) =>
+      prev
+        .filter((p) => p.id !== id)
+        .map((p, i) => ({ ...p, seq: i + 1 }))
+    );
+    if (movingDotId === id) setMovingDotId(null);
+  }, [movingDotId]);
+
+  const handleBoundaryBeginMovePoint = useCallback((id) => {
+    setMovingDotId(id);          // the marker becomes draggable in MapWrapper
+  }, []);
+
+  const handleBoundaryMovePointTo = useCallback((id, latlng) => {
+    setBoundaryPoints((prev) =>
+      prev.map((p) => (p.id === id ? { ...p, lat: latlng.lat, lng: latlng.lng } : p))
+    );
+  }, []);
+
+  const handleBoundaryEndMovePoint = useCallback(() => {
+    setMovingDotId(null);
   }, []);
 
   // ----- DYNAMIC ISLAND BUTTONS ----- //
@@ -176,7 +291,17 @@ export default function HomePage() {
           >
             Per
           </SidebarButton>
-          <SidebarButton label="Boundaries">B</SidebarButton>
+          <SidebarButton 
+            label="Boundaries"
+            menuTitle="Boundaries"
+            menu={[
+              { icon: "🧭", label: "Create Boundaries", onClick: handleBoundaryStart }, // (icon can be replaced later with SVG)
+              { icon: "📁", label: "Show Saved Boundaries", onClick: handleBoundaryShowSaved },
+              { icon: "🧹", label: "Clear Shown Boundaries", onClick: handleBoundaryClearShown, disabled: !boundaryShown },
+            ]}
+          >
+            B
+          </SidebarButton>
           <SidebarButton label="Pathing">Path</SidebarButton>
           <SidebarButton label="Set Home">H</SidebarButton>
           <SidebarButton label="?">?</SidebarButton>
@@ -202,7 +327,18 @@ export default function HomePage() {
             {/* Map Card */}
             <div className="flex-1 bg-amv-white border border-amv-maroon/30 rounded-md p-2 relative shadow-sm">
               <div className="absolute inset-0 z-0 rounded-md overflow-hidden">
-                <MapWrapper pathCoords={perimeterPath} />
+                <MapWrapper pathCoords={perimeterPath} 
+                  isBoundarySession={isBoundarySession}
+                  isBoundaryAdding={isBoundaryAdding}
+                  boundaryPoints={boundaryPoints}
+                  movingDotId={movingDotId}
+                  onBoundaryAddPoint={handleBoundaryAddPoint}
+                  onBoundaryPause={() => setIsBoundaryAdding(false)}
+                  onBoundaryRemovePoint={handleBoundaryRemovePoint}
+                  onBoundaryBeginMovePoint={handleBoundaryBeginMovePoint}
+                  onBoundaryMovePointTo={handleBoundaryMovePointTo}
+                  onBoundaryEndMovePoint={handleBoundaryEndMovePoint}
+                />
               </div>
 
               {/* Dynamic Island — top-center controller */}
@@ -253,6 +389,40 @@ export default function HomePage() {
                     <span className="ml-1 text-amv-white font-bold text-xs opacity-100">
                       {isPaused ? "Paused" : "Recording…"}
                     </span>
+                  </div>
+                </div>
+              )}
+
+              {isBoundarySession && (
+                <div className="pointer-events-none absolute top-3 left-1/2 -translate-x-1/2 z-40">
+                  <div className="pointer-events-auto flex items-center gap-2 rounded-full bg-black/70 text-white border border-[#6B0F2B] px-3 py-1.5 shadow-[0_10px_24px_rgba(107,15,43,0.45)] backdrop-blur">
+                    {/* Add Dot toggle */}
+                    <button
+                      onClick={handleBoundaryAddToggle}
+                      aria-label="Toggle add boundary dot"
+                      className={[
+                        "px-3 py-1 rounded-full",
+                        "bg-white text-[#1F1F22] border border-[#6B0F2B] shadow-sm",
+                        "hover:bg-white/90 active:bg-white/80 transition",
+                        isBoundaryAdding ? "ring-2 ring-[#6B0F2B]" : ""
+                      ].join(" ")}
+                    >
+                      {isBoundaryAdding ? "Pause" : "Add More Dots"}
+                    </button>
+
+                    {/* Status */}
+                    <span className="text-xs opacity-80">
+                      {isBoundaryAdding ? "Click map to add. Right-click to pause." : "Paused"}
+                    </span>
+
+                    {/* Stop */}
+                    <button
+                      onClick={handleBoundaryStopRequest}
+                      aria-label="Stop boundary definition"
+                      className="px-3 py-1 rounded-full bg-white text-[#1F1F22] border border-[#6B0F2B] shadow-sm hover:bg-white/90 active:bg-white/80 transition"
+                    >
+                      Stop
+                    </button>
                   </div>
                 </div>
               )}
@@ -382,6 +552,22 @@ export default function HomePage() {
                   >
                     Save
                   </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {showStopBoundaryModal && (
+            <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center">
+              <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-xl">
+                <h3 className="text-lg font-semibold text-black mb-2">End Boundary Definition?</h3>
+                <p className="text-sm text-black/70 mb-4">
+                  Choose what to do with the defined boundary.
+                </p>
+                <div className="flex gap-2 justify-end">
+                  <button onClick={handleBoundaryStopCancel} className="px-4 py-2 rounded-md border border-black/10 text-black hover:bg-black/5 transition">Cancel</button>
+                  <button onClick={handleBoundaryStopDontSave} className="px-4 py-2 rounded-md bg-[#b91c1c] text-white hover:bg-[#991b1b] transition">Don’t Save</button>
+                  <button onClick={handleBoundaryStopSave} className="px-4 py-2 rounded-md bg-[#6B0F2B] text-white hover:bg-[#5a0d24] active:bg-[#490a1e] transition">Save</button>
                 </div>
               </div>
             </div>
